@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -26,9 +25,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,5 +108,44 @@ fun MidRect(modifier: Modifier = Modifier) {
                 color = Color(0xFF6a6a6a),
                 shape = RoundedCornerShape(35.dp)
             )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight(0.6f)
+                .fillMaxWidth(1f)
+                .offset(y=(70).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            MainTextField("Email/Login")
+            Spacer(modifier = Modifier.height(35.dp))
+
+            MainTextField("Password")
+            Spacer(modifier = Modifier.height(35.dp))
+
+            MainTextField("Re-type password")
+        }
+    }
+}
+
+@Composable
+fun MainTextField(labText:String) {
+    var text by remember { mutableStateOf("") }
+
+    TextField(
+        value = text,
+        onValueChange = { text = it },
+        label = { Text(labText) },
+        modifier = Modifier
+            .fillMaxWidth(0.85f)
+            .height(55.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color(0xFFD9D9D9),
+            unfocusedContainerColor = Color(0xFFD9D9D9),
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        ),
+        shape = RoundedCornerShape(35.dp),
+        textStyle = TextStyle(fontSize = 14.sp),
+        singleLine = true
     )
 }
