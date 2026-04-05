@@ -26,6 +26,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.getValue
@@ -34,6 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,7 +109,7 @@ fun MidRect(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth(0.9f)
-            .fillMaxHeight(0.5f)
+            .fillMaxHeight(0.55f)
             .background(
                 color = Color(0xFF6a6a6a),
                 shape = RoundedCornerShape(35.dp)
@@ -111,7 +117,7 @@ fun MidRect(modifier: Modifier = Modifier) {
     ) {
         Column(
             modifier = Modifier
-                .fillMaxHeight(0.6f)
+                .fillMaxHeight(0.7f)
                 .fillMaxWidth(1f)
                 .offset(y=(70).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -119,16 +125,21 @@ fun MidRect(modifier: Modifier = Modifier) {
             MainTextField("Email/Login")
             Spacer(modifier = Modifier.height(35.dp))
 
-            MainTextField("Password")
+            MainTextField("Password", true)
             Spacer(modifier = Modifier.height(35.dp))
 
-            MainTextField("Re-type password")
+            MainTextField("Re-type password", true)
+            Spacer(modifier = Modifier.height(35.dp))
+
+            Btn("Sign up"){
+                println("Kliknięto register") // TO DO
+            }
         }
     }
 }
 
 @Composable
-fun MainTextField(labText:String) {
+fun MainTextField(labText:String, isPassword: Boolean = false) {
     var text by remember { mutableStateOf("") }
 
     TextField(
@@ -146,6 +157,29 @@ fun MainTextField(labText:String) {
         ),
         shape = RoundedCornerShape(35.dp),
         textStyle = TextStyle(fontSize = 14.sp),
-        singleLine = true
+        singleLine = true,
+
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardOptions = if (isPassword)
+            KeyboardOptions(keyboardType = KeyboardType.Password)
+        else
+            KeyboardOptions.Default
     )
+}
+
+@Composable
+fun Btn(text: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth(0.3f)
+            .height(55.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF3982FF),
+            contentColor = Color.White
+        ),
+        shape = RoundedCornerShape(35.dp)
+    ){
+        Text(text, fontSize = 16.sp)
+    }
 }
