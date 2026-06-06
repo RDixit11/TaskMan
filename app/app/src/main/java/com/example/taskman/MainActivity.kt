@@ -1,5 +1,6 @@
 package com.example.taskman
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -54,7 +55,10 @@ import kotlinx.coroutines.launch
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -147,7 +151,7 @@ fun MidRect(navController: NavController, modifier: Modifier = Modifier.offset(y
     Box(
         modifier = modifier
             .fillMaxWidth(0.9f)
-            .fillMaxHeight(0.55f)
+            .fillMaxHeight(0.60f)
             .background(
                 color = Color(0xFF6a6a6a),
                 shape = RoundedCornerShape(35.dp)
@@ -160,13 +164,13 @@ fun MidRect(navController: NavController, modifier: Modifier = Modifier.offset(y
                 .offset(y=(70).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            MainTextField("Login", email) {email = it}
+            MainTextField("Login", email, icon = R.drawable.mail) {email = it}
             Spacer(modifier = Modifier.height(35.dp))
 
-            MainTextField("Password", password,true) {password = it}
+            MainTextField("Password", password,true, R.drawable.key) {password = it}
             Spacer(modifier = Modifier.height(35.dp))
 
-            MainTextField("Re-type password", repeatPassword, true) {repeatPassword = it}
+            MainTextField("Re-type password", repeatPassword, true, R.drawable.key) {repeatPassword = it}
             Spacer(modifier = Modifier.height(35.dp))
 
             val scope = rememberCoroutineScope()
@@ -192,6 +196,23 @@ fun MidRect(navController: NavController, modifier: Modifier = Modifier.offset(y
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(buildAnnotatedString {
+                withStyle(SpanStyle(color = Color.White)) {
+                    append("Already have an account? ")
+                }
+
+                withStyle(SpanStyle(color = Color(0xFF3982FF))) {
+                    append("login")
+                }
+
+            },
+                modifier = Modifier.clickable {
+                    navController.navigate("login")
+                }
+            )
         }
     }
 }
@@ -204,7 +225,7 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
     Box(
         modifier = modifier
             .fillMaxWidth(0.9f)
-            .fillMaxHeight(0.55f)
+            .fillMaxHeight(0.6f)
             .background(
                 color = Color(0xFF6a6a6a),
                 shape = RoundedCornerShape(35.dp)
@@ -212,15 +233,14 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
     ) {
         Column(
             modifier = Modifier
-                .fillMaxHeight(0.7f)
-                .fillMaxWidth(1f)
-                .offset(y=(70).dp),
+                .fillMaxSize()
+                .padding(top=70.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            MainTextField("Login", email) {email = it}
+            MainTextField("Login", email, icon=R.drawable.mail) {email = it}
             Spacer(modifier = Modifier.height(35.dp))
 
-            MainTextField("Password", password,true) {password = it}
+            MainTextField("Password", password,true, icon = R.drawable.key) {password = it}
             Spacer(modifier = Modifier.height(35.dp))
 
             Text(
@@ -234,6 +254,7 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
             )
 
             val scope = rememberCoroutineScope()
+            val context = LocalContext.current
 
             Btn("Log in"){
                 Log.d("API_DEBUG", "login=$email password=$password")
@@ -245,7 +266,18 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
 
                         if (response.isSuccessful) {
                             Log.d("API", "")
-                            navController.navigate("") // TO DO
+
+                            val loginData = response.body()
+                            if (loginData != null) {
+                                val userId = loginData.uzytkownikId
+                                val token = loginData.tokenCsrf
+                                val message = loginData.wiadomosc
+                                Log.d("API_SUCCESS", "Zalogowano użytkownika o ID: $userId")
+                                Log.d("API_SUCCESS", "Token: $token")
+
+                                val intent = Intent(context, AppHomePage::class.java).apply{}
+                                context.startActivity(intent)
+                            }
                         } else {
                             Log.e("API", "Błąd: ${response.code()}")
                             Log.e("API", "BODY: ${response.errorBody()?.string()}")
@@ -282,12 +314,22 @@ fun MainTextField(
     labText: String,
     value: String,
     isPassword: Boolean = false,
+    icon: Int? = null,
     onValueChange: (String) -> Unit
 ) {
     TextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(labText) },
+        leadingIcon = icon?.let {
+            {
+                Icon(
+                    painter = painterResource(id = it),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        },
         modifier = Modifier
             .fillMaxWidth(0.85f)
             .height(55.dp),
@@ -313,7 +355,7 @@ fun Btn(text: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth(0.3f)
+            .fillMaxWidth(0.4f)
             .height(55.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFF3982FF),

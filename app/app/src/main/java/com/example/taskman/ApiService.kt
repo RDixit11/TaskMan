@@ -10,5 +10,5 @@ interface ApiService {
     suspend fun createUser(@Body user: User): Response<Unit>
 
     @POST("/api/logowanie") // Funkcja do logowania
-    suspend fun login(@Body user: User): Response<Unit>
+    suspend fun login(@Body user: User): Response<LoginResponse>
 }
