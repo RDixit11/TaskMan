@@ -1,6 +1,5 @@
 package com.example.taskman
 
-import android.media.Image
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -52,15 +51,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.taskman.RetrofitInstance.api
 import kotlinx.coroutines.launch
+import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
+import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
 
-            NavHost(navController, startDestination = "login") {
+            NavHost(navController, startDestination = "splash") {
+                composable("splash") { MyCustomSplashScreen(navController) }
                 composable("register") { RegisterScreen(navController) }
                 composable("login") { LoginScreen(navController) }
             }
@@ -233,7 +239,7 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
                 Log.d("API_DEBUG", "login=$email password=$password")
                 scope.launch {
                     try {
-                        val response = api.createUser(
+                        val response = api.login(
                             User(login=email, haslo=password)
                         )
 
@@ -243,6 +249,8 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
                         } else {
                             Log.e("API", "Błąd: ${response.code()}")
                             Log.e("API", "BODY: ${response.errorBody()?.string()}")
+                            email = ""
+                            password = ""
                         }
 
                     } catch (e: Exception) {
@@ -314,5 +322,33 @@ fun Btn(text: String, onClick: () -> Unit) {
         shape = RoundedCornerShape(35.dp)
     ){
         Text(text, fontSize = 16.sp)
+    }
+}
+
+@Composable // Komponent odpowiedzialny za wyświetlanie animacji
+fun MyCustomSplashScreen(navController: NavController) {
+    val image = AnimatedImageVector.animatedVectorResource(R.drawable.avd_anim)
+    var atEnd by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = true) {
+        atEnd = true
+        delay(1500)
+
+        navController.navigate("login") {
+            popUpTo("splash") { inclusive = true }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = rememberAnimatedVectorPainter(image, atEnd),
+            contentDescription = "Logo",
+            modifier = Modifier.size(228.dp)
+        )
     }
 }
