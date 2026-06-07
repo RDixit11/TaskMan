@@ -2,6 +2,7 @@ package com.example.taskman
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -40,13 +41,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.lifecycleScope
+import com.example.taskman.RetrofitInstance.api
+import kotlinx.coroutines.launch
 
 class AppAddPage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val LoginToken = intent.getStringExtra("TOKEN_CSRF") ?: ""
+
         setContent {
             var boardName by remember { mutableStateOf("") }
-
+            var vis by remember { mutableStateOf<Boolean?>(null) }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -66,7 +73,25 @@ class AppAddPage : ComponentActivity() {
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    CreateButton()
+                    CreateButton(
+                        boardName = boardName,
+                        LoginToken = LoginToken,
+                        vis = vis,
+                        onCreateClick = {
+                            val boardInfo = CreateBoardRequest(LoginToken, boardName)
+
+                            lifecycleScope.launch {
+                                try {
+                                    val response = api.createBoard(boardInfo)
+                                    if (response.isSuccessful) {
+                                        finish()
+                                    }
+                                } catch (e: Exception) {
+                                    Log.d("API", "Wyjątek: ${e.message}")
+                                }
+                            }
+                        }
+                    )
                 }
                 Spacer(modifier = Modifier.height(40.dp))
 
@@ -87,7 +112,7 @@ class AppAddPage : ComponentActivity() {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    VisibilityOptions()
+                    VisibilityOptions(currentVis = vis, onVisChanged = { vis = it })
                 }
             }
         }
@@ -139,10 +164,15 @@ fun ClickableExitIcon() {
 }
 
 @Composable
-fun CreateButton() {
+fun CreateButton(boardName: String, LoginToken:String,
+                 vis: Boolean?,
+                 onCreateClick: () -> Unit) {
     Button(onClick = {
-        println("Przycisk został kliknięty!")
-    },
+        if (boardName.isNotBlank() && vis == true) {
+            onCreateClick()
+    } else {
+        println("Błąd: Wpisz nazwę i wybierz widoczność!")
+    }},
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFF404041),
             contentColor = Color.White
@@ -153,7 +183,7 @@ fun CreateButton() {
 }
 
 @Composable
-fun VisibilityOptions() {
+fun VisibilityOptions(currentVis: Boolean?, onVisChanged: (Boolean) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -170,8 +200,11 @@ fun VisibilityOptions() {
                     .weight(1f)
                     .fillMaxWidth()
                     .clickable {
-                        println("Wybrano opcję: Private")
+                        onVisChanged(true)
                     }
+                    .background(
+                        if (currentVis == true) Color(0xFF505052) else Color.Transparent
+                    )
                     .padding(16.dp)
             ) {
                 Text(
@@ -199,8 +232,11 @@ fun VisibilityOptions() {
                     .weight(1f)
                     .fillMaxWidth()
                     .clickable {
-                        println("Wybrano opcję: Public")
+                        onVisChanged(false)
                     }
+                    .background(
+                        if (currentVis == false) Color(0xFF505052) else Color.Transparent
+                    )
                     .padding(16.dp)
             ) {
                 Text(

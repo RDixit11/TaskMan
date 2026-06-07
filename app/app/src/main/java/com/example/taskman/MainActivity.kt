@@ -271,11 +271,12 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
                             if (loginData != null) {
                                 val userId = loginData.uzytkownikId
                                 val token = loginData.tokenCsrf
-                                val message = loginData.wiadomosc
                                 Log.d("API_SUCCESS", "Zalogowano użytkownika o ID: $userId")
                                 Log.d("API_SUCCESS", "Token: $token")
 
-                                val intent = Intent(context, AppHomePage::class.java).apply{}
+                                val intent = Intent(context, AppHomePage::class.java).apply{
+                                    putExtra("TOKEN_CSRF", token)
+                                }
                                 context.startActivity(intent)
                             }
                         } else {

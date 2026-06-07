@@ -37,8 +37,10 @@ import androidx.compose.ui.text.TextStyle
 class AppHomePage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             var searchQuery by remember { mutableStateOf("") }
+            val token = intent.getStringExtra("TOKEN_CSRF") ?: ""
 
             Column(
                 modifier = Modifier
@@ -62,7 +64,7 @@ class AppHomePage : ComponentActivity() {
                             .weight(1f)
                     )
 
-                    ClickableAddIcon()
+                    ClickableAddIcon(token)
                 }
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -118,7 +120,7 @@ fun SearchBar(
 }
 
 @Composable
-fun ClickableAddIcon() {
+fun ClickableAddIcon(token: String) {
     val context = LocalContext.current
 
     Image(
@@ -127,7 +129,9 @@ fun ClickableAddIcon() {
         modifier = Modifier
             .size(120.dp)
             .clickable {
-                val intent = Intent(context, AppAddPage::class.java)
+                val intent = Intent(context, AppAddPage::class.java).apply {
+                    putExtra("TOKEN_CSRF", token)
+                }
                 context.startActivity(intent)
             }
     )
