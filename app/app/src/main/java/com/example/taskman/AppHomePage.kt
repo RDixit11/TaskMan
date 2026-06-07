@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -42,33 +43,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.lifecycle.lifecycleScope
 import com.example.taskman.RetrofitInstance.api
+import kotlinx.coroutines.launch
 
 class AppHomePage : ComponentActivity() {
+
+    private var privateBoards by mutableStateOf<List<Board>>(emptyList())
+    private var token = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        token = intent.getStringExtra("TOKEN_CSRF") ?: ""
 
         setContent {
             var searchQuery by remember { mutableStateOf("") }
-            val token = intent.getStringExtra("TOKEN_CSRF") ?: ""
-            var privateBoards by remember { mutableStateOf<List<Board>>(emptyList()) }
-            LaunchedEffect(Unit) {
-                try {
-                    val response = api.getBoards(token)
-                    if (response.isSuccessful) {
-                        val wrapper = response.body()
-
-                        if (wrapper != null) {
-                            privateBoards = wrapper.listy
-                            for (board in privateBoards) {
-                                Log.d("API_SUKCES", "Nazwa tablicy z serwera: ${board.name}")
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("API", "Wyjątek podczas pobierania: ${e.message}")
-                }
-            }
 
             Column(
                 modifier = Modifier
@@ -114,6 +101,25 @@ class AppHomePage : ComponentActivity() {
                     Spacer(modifier = Modifier.height(20.dp))
 
                     //BoardList("Shared Boards")
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (token.isNotBlank()) {
+            lifecycleScope.launch {
+                try {
+                    val response = api.getBoards(token)
+                    if (response.isSuccessful) {
+                        val wrapper = response.body()
+                        if (wrapper != null) {
+                            privateBoards = wrapper.listy // Aktualizacja stanu -> Compose sam przerysuje listę!
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("API", "Błąd onResume: ${e.message}")
                 }
             }
         }
@@ -196,25 +202,29 @@ fun BoardList(textval: String, boards: List<Board>) {
                 shape = RoundedCornerShape(35.dp)
             )
         ) {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
                 if (boards.isEmpty()) {
-                    Text(
-                        text = "No boards found",
-                        color = Color.Gray,
-                        fontSize = 16.sp
-                    )
+                    item {
+                        Text(
+                            text = "No boards found",
+                            color = Color.Gray,
+                            fontSize = 16.sp
+                        )
+                    }
                 } else {
                     boards.forEach { board ->
-                        Text(
-                            text = board.name,
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
+                        item {
+                            Text(
+                                text = board.name,
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
                     }
                 }
             }

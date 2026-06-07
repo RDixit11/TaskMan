@@ -75,7 +75,6 @@ class AppAddPage : ComponentActivity() {
 
                     CreateButton(
                         boardName = boardName,
-                        LoginToken = LoginToken,
                         vis = vis,
                         onCreateClick = {
                             val boardInfo = CreateBoardRequest(LoginToken, boardName)
@@ -164,7 +163,7 @@ fun ClickableExitIcon() {
 }
 
 @Composable
-fun CreateButton(boardName: String, LoginToken:String,
+fun CreateButton(boardName: String,
                  vis: Boolean?,
                  onCreateClick: () -> Unit) {
     Button(onClick = {
