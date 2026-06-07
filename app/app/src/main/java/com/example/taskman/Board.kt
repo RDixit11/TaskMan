@@ -1,6 +1,7 @@
 package com.example.taskman
 
+import com.google.gson.annotations.SerializedName
+
 data class Board(
-    val name: String,
-    val visibility: Boolean
+    @SerializedName("nazwa") val name: String
 )

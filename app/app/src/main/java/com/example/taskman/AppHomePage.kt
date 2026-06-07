@@ -2,25 +2,31 @@ package com.example.taskman
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
+import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.forEach
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,16 +37,38 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.lifecycle.lifecycleScope
+import com.example.taskman.RetrofitInstance.api
 
 class AppHomePage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
         setContent {
             var searchQuery by remember { mutableStateOf("") }
             val token = intent.getStringExtra("TOKEN_CSRF") ?: ""
+            var privateBoards by remember { mutableStateOf<List<Board>>(emptyList()) }
+            LaunchedEffect(Unit) {
+                try {
+                    val response = api.getBoards(token)
+                    if (response.isSuccessful) {
+                        val wrapper = response.body()
+
+                        if (wrapper != null) {
+                            privateBoards = wrapper.listy
+                            for (board in privateBoards) {
+                                Log.d("API_SUKCES", "Nazwa tablicy z serwera: ${board.name}")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("API", "Wyjątek podczas pobierania: ${e.message}")
+                }
+            }
 
             Column(
                 modifier = Modifier
@@ -57,6 +85,7 @@ class AppHomePage : ComponentActivity() {
                 ) {
                     Text(
                         text = "Welcome Back!",
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                         color = Color.White,
                         fontSize = 30.sp,
                         modifier = Modifier
@@ -77,6 +106,14 @@ class AppHomePage : ComponentActivity() {
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(0.9f)
                     )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    BoardList("Your Boards", privateBoards)
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    //BoardList("Shared Boards")
                 }
             }
         }
@@ -135,4 +172,52 @@ fun ClickableAddIcon(token: String) {
                 context.startActivity(intent)
             }
     )
+}
+
+@Composable
+fun BoardList(textval: String, boards: List<Board>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF1E1E1E))
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            textval,
+            color = Color.White,
+            fontSize = 25.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        Box(modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .height(160.dp)
+            .background(
+                color = Color(0xFF282828),
+                shape = RoundedCornerShape(35.dp)
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+            ) {
+                if (boards.isEmpty()) {
+                    Text(
+                        text = "No boards found",
+                        color = Color.Gray,
+                        fontSize = 16.sp
+                    )
+                } else {
+                    boards.forEach { board ->
+                        Text(
+                            text = board.name,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
