@@ -149,7 +149,7 @@ fun MidRect(navController: NavController, modifier: Modifier = Modifier.offset(y
     var repeatPassword by remember { mutableStateOf("") }
 
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth(0.9f)
             .fillMaxHeight(0.60f)
             .background(

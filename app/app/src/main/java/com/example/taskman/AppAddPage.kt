@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialogDefaults.containerColor
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -37,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.font.FontWeight
 
 class AppAddPage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,6 +80,14 @@ class AppAddPage : ComponentActivity() {
                         onValueChange = { boardName = it },
                         modifier = Modifier.fillMaxWidth(0.9f)
                     )
+
+                    Spacer(modifier = Modifier.height(55.dp))
+
+                    Text("Visibility", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    VisibilityOptions()
                 }
             }
         }
@@ -138,5 +149,73 @@ fun CreateButton() {
     ),
     shape = RoundedCornerShape(25.dp)) {
         Text(text = "Create")
+    }
+}
+
+@Composable
+fun VisibilityOptions() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.35f)
+            .background(
+                color = Color(0xFF404041),
+            )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clickable {
+                        println("Wybrano opcję: Private")
+                    }
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Private",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "This board can be seen and edited only by you",
+                    color = Color(0xFFB3B3B3),
+                    fontSize = 14.sp
+                )
+            }
+
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = Color(0xFF636365),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clickable {
+                        println("Wybrano opcję: Public")
+                    }
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Public",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "This board can be seen and edited by people you share this board with",
+                    color = Color(0xFFB3B3B3),
+                    fontSize = 14.sp
+                )
+            }
+        }
     }
 }
