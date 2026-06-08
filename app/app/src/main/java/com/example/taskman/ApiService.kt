@@ -29,4 +29,7 @@ interface ApiService {
 
     @PUT("/api/listy-zadan/{id}") // Funkcja do zmiany nazwy tablicy)
     suspend fun renameBoard(@Body createBoardRequest: CreateBoardRequest, @Path("id") boardId: Int): Response<Unit>
+
+    @POST("/api/listy-zadan/{id}/zadania") // Funkcja do tworzenia nowego zadania)
+    suspend fun addTask(@Body addTaskRequest: AddTaskRequest, @Path("id") boardId: Int): Response<Unit>
 }

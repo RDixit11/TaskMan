@@ -15,6 +15,9 @@
         android:theme="@style/Theme.TaskMan"
         android:usesCleartextTraffic="true">
         <activity
+            android:name=".AppTaskPage"
+            android:exported="false" />
+        <activity
             android:name=".AppAddPage"
             android:exported="false" />
         <activity

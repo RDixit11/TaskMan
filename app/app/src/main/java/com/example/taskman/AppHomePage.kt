@@ -54,7 +54,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 class AppHomePage : ComponentActivity() {
     private var token = ""
 
@@ -209,6 +208,7 @@ fun ClickableAddIcon(token: String) {
 @Composable
 fun BoardList(textval: String, boards: List<Board>, token: String, onRefresh: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -258,8 +258,15 @@ fun BoardList(textval: String, boards: List<Board>, token: String, onRefresh: ()
                                         shape = RoundedCornerShape(15.dp)
                                     )
                                     .offset(x=10.dp)
-
-
+                                    .clickable {
+                                        val intent =
+                                            Intent(context, AppTaskPage::class.java).apply {
+                                                putExtra("TOKEN_CSRF", token)
+                                                putExtra("BOARD_ID", board.id)
+                                                putExtra("BOARD_NAME", board.name)
+                                            }
+                                        context.startActivity(intent)
+                                    }
                             ) {
                                 Row(
                                     modifier = Modifier
