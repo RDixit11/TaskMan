@@ -22,8 +22,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -37,17 +42,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.DpOffset
 import androidx.lifecycle.lifecycleScope
 import com.example.taskman.RetrofitInstance.api
 import kotlinx.coroutines.launch
-
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 class AppHomePage : ComponentActivity() {
-
-    private var privateBoards by mutableStateOf<List<Board>>(emptyList())
     private var token = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +64,25 @@ class AppHomePage : ComponentActivity() {
 
         setContent {
             var searchQuery by remember { mutableStateOf("") }
+            var privateBoards by remember { mutableStateOf<List<Board>>(emptyList()) }
 
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                if (token.isNotBlank()) {
+                    lifecycleScope.launch {
+                        try {
+                            val response = api.getBoards(token)
+                            if (response.isSuccessful) {
+                                val wrapper = response.body()
+                                if (wrapper != null) {
+                                    privateBoards = wrapper.listy
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("API", "Błąd pobierania danych w ON_RESUME: ${e.message}")
+                        }
+                    }
+                }
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -96,30 +122,30 @@ class AppHomePage : ComponentActivity() {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    BoardList("Your Boards", privateBoards)
+                    BoardList(
+                        textval = "Your Boards",
+                        boards = privateBoards,
+                        token = token,
+                        onRefresh = {
+                            lifecycleScope.launch {
+                                try {
+                                    val response = api.getBoards(token)
+                                    if (response.isSuccessful) {
+                                        val wrapper = response.body()
+                                        if (wrapper != null) {
+                                            privateBoards = wrapper.listy
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("API", "Błąd podczas odświeżania listy: ${e.message}")
+                                }
+                            }
+                        }
+                    )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
                     //BoardList("Shared Boards")
-                }
-            }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (token.isNotBlank()) {
-            lifecycleScope.launch {
-                try {
-                    val response = api.getBoards(token)
-                    if (response.isSuccessful) {
-                        val wrapper = response.body()
-                        if (wrapper != null) {
-                            privateBoards = wrapper.listy // Aktualizacja stanu -> Compose sam przerysuje listę!
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("API", "Błąd onResume: ${e.message}")
                 }
             }
         }
@@ -181,7 +207,8 @@ fun ClickableAddIcon(token: String) {
 }
 
 @Composable
-fun BoardList(textval: String, boards: List<Board>) {
+fun BoardList(textval: String, boards: List<Board>, token: String, onRefresh: () -> Unit) {
+    val coroutineScope = rememberCoroutineScope()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -196,7 +223,7 @@ fun BoardList(textval: String, boards: List<Board>) {
         Spacer(modifier = Modifier.height(10.dp))
         Box(modifier = Modifier
             .fillMaxWidth(0.9f)
-            .height(160.dp)
+            .height(200.dp)
             .background(
                 color = Color(0xFF282828),
                 shape = RoundedCornerShape(35.dp)
@@ -216,15 +243,165 @@ fun BoardList(textval: String, boards: List<Board>) {
                         )
                     }
                 } else {
-                    boards.forEach { board ->
-                        item {
-                            Text(
-                                text = board.name,
-                                color = Color.White,
-                                fontSize = 18.sp,
-                                modifier = Modifier.padding(vertical = 8.dp)
+                    items(boards) { board ->
+                        var isMenuExpanded by rememberSaveable { mutableStateOf(false) }
+                        var showRenameDialog by remember { mutableStateOf(false) }
+                        var newBoardName by remember { mutableStateOf(board.name) }
+                        var showDeleteDialog by remember { mutableStateOf(false) }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .background(
+                                        color = Color(0xFF404041),
+                                        shape = RoundedCornerShape(15.dp)
+                                    )
+                                    .offset(x=10.dp)
+
+
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = board.name,
+                                        color = Color.White,
+                                        fontSize = 18.sp,
+                                        modifier = Modifier.padding(vertical = 2.dp).weight(1f)
+
+                                    )
+
+                                    Box {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.more),
+                                            contentDescription = "Menu",
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .offset(x = -20.dp)
+                                                .clickable {
+                                                    isMenuExpanded = true
+                                                }
+                                        )
+
+                                        DropdownMenu(
+                                            expanded = isMenuExpanded,
+                                            onDismissRequest = { isMenuExpanded = false },
+                                            offset = DpOffset(x = (-20).dp, y=0.dp),
+                                            modifier = Modifier.background(Color(0xFF282828))
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("Change name", color = Color.White) },
+                                                onClick = {
+                                                    isMenuExpanded = false
+                                                    newBoardName = board.name
+                                                    showRenameDialog = true
+                                                }
+                                            )
+
+                                            DropdownMenuItem(
+                                                text = { Text("Delete board", color = Color.Red) },
+                                                onClick = {
+                                                    isMenuExpanded = false
+                                                    showDeleteDialog = true
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        if (showRenameDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showRenameDialog = false },
+                                title = { Text(text = "Change board name", color = Color.White) },
+                                text = {
+                                    Column {
+                                        Text("Enter new name for the board:", color = Color.Gray, modifier = Modifier.padding(bottom = 8.dp))
+                                        TextField(
+                                            value = newBoardName,
+                                            onValueChange = { newBoardName = it },
+                                            singleLine = true,
+                                            colors = TextFieldDefaults.colors(
+                                                focusedContainerColor = Color(0xFF404041),
+                                                unfocusedContainerColor = Color(0xFF404041),
+                                                focusedTextColor = Color.White,
+                                                unfocusedTextColor = Color.White
+                                            )
+                                        )
+                                    }
+                                },
+                                containerColor = Color(0xFF282828),
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            showRenameDialog = false
+                                            if (newBoardName.isNotBlank()) {
+                                                Log.d("API", "Zmieniam nazwę tablicy ${board.id} na: $newBoardName")
+                                                coroutineScope.launch {
+                                                    val boardInfo = CreateBoardRequest(token, newBoardName)
+                                                    try {
+                                                        val response = api.renameBoard(boardInfo, board.id)
+                                                        if (response.isSuccessful) {
+                                                            Log.d("API", "Nazwa zmieniona pomyślnie!")
+                                                            onRefresh()
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        Log.e("API", "Błąd zmiany nazwy: ${e.message}")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Text("Save", color = Color.White)
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showRenameDialog = false }) {
+                                        Text("Cancel", color = Color.Gray)
+                                    }
+                                }
                             )
                         }
+
+                        if (showDeleteDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showDeleteDialog = false },
+                                title = { Text(text = "Delete board", color = Color.White) },
+                                text = {
+                                    Text("Are you sure you want to delete board \"${board.name}\"? This action cannot be undone.", color = Color.LightGray)
+                                },
+                                containerColor = Color(0xFF282828),
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            showDeleteDialog = false
+                                            coroutineScope.launch {
+                                                try {
+                                                    val response = api.deleteBoard(token, board.id)
+                                                    if (response.isSuccessful) {
+                                                        Log.d("API", "Usunięto tablicę!")
+                                                        onRefresh()
+                                                    }
+                                                } catch (e: Exception) {
+                                                    Log.e("API", "Błąd usuwania: ${e.message}")
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Text("Delete", color = Color.Red)
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showDeleteDialog = false }) {
+                                        Text("Cancel", color = Color.Gray)
+                                    }
+                                }
+                            )
+                        }
+
                     }
                 }
             }

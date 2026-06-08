@@ -156,8 +156,7 @@ fun ClickableExitIcon() {
         modifier = Modifier
             .size(40.dp)
             .clickable {
-                val intent = Intent(context, AppHomePage::class.java)
-                context.startActivity(intent)
+                (context as? ComponentActivity)?.finish()
             }
     )
 }
