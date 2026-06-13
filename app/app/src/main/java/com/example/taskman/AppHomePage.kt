@@ -120,10 +120,13 @@ class AppHomePage : ComponentActivity() {
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
+                    val filteredBoards = privateBoards.filter { board ->
+                        board.name.contains(searchQuery, ignoreCase = true)
+                    }
 
                     BoardList(
                         textval = "Your Boards",
-                        boards = privateBoards,
+                        boards = filteredBoards,
                         token = token,
                         onRefresh = {
                             lifecycleScope.launch {

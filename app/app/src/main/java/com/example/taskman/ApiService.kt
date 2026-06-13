@@ -5,6 +5,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -32,4 +33,16 @@ interface ApiService {
 
     @POST("/api/listy-zadan/{id}/zadania") // Funkcja do tworzenia nowego zadania)
     suspend fun addTask(@Body addTaskRequest: AddTaskRequest, @Path("id") boardId: Int): Response<Unit>
+
+    @GET("/api/listy-zadan/{id}/zadania") // Funkcja do pobierania zadań
+    suspend fun getTasks(@Path("id") boardId: Int, @Header("X-CSRF-Token") token: String): Response<TasksResponse>
+
+    @PATCH("/api/zadania/{id_zadania}/stan") // Funkcja do zmiany stanu zadania
+    suspend fun updateTaskStatus(@Body updateTaskStatusRequest: UpdateTaskStatusRequest, @Path("id_zadania") taskId: Int): Response<Unit>
+
+    @DELETE("/api/zadania/{id_zadania}") // Funkcja do usuwania zadania
+    suspend fun deleteTask(@Header("X-CSRF-Token") token: String, @Path("id_zadania") taskId: Int): Response<Unit>
+
+    @PUT("/api/zadania/{id_zadania}") // Funkcja do zmiany nazwy i opisu zadania
+    suspend fun updateTask(@Body AddTaskRequest: AddTaskRequest, @Path("id_zadania") taskId: Int): Response<Unit>
 }
