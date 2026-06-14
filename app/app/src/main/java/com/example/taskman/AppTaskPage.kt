@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -53,7 +54,10 @@ class AppTaskPage : ComponentActivity() {
     private var boardId = -1
     private var boardName = ""
 
+    private var isShared = false
     private var taskList by mutableStateOf<List<Tasks>>(emptyList())
+    private var memberList by mutableStateOf<List<Member>>(emptyList())
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,7 +66,12 @@ class AppTaskPage : ComponentActivity() {
         boardId = intent.getIntExtra("BOARD_ID", -1)
         boardName = intent.getStringExtra("BOARD_NAME") ?: "Task Page"
 
+        isShared = intent.getBooleanExtra("IS_SHARED", false)
+
         refreshTasks()
+        if (isShared) {
+            refreshMembers()
+        }
 
         setContent {
             Column(
@@ -84,8 +93,18 @@ class AppTaskPage : ComponentActivity() {
                     token = token,
                     boardId = boardId,
                     tasks = taskList,
-                    onRefresh = { refreshTasks() }
+                    onRefresh = { refreshTasks() },
+                    modifier = Modifier.fillMaxHeight(if (isShared) 0.45f else 0.85f)
                 )
+                if (isShared) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    MembersBox(
+                        members = memberList,
+                        boardId = boardId,
+                        token = token,
+                        onMemberAdded = { refreshMembers() }
+                    )
+                }
             }
         }
     }
@@ -107,9 +126,28 @@ class AppTaskPage : ComponentActivity() {
             }
         }
     }
+
+    private fun refreshMembers() {
+        lifecycleScope.launch {
+            try {
+                val response = api.getMembers(token=token,boardId)
+                if (response.isSuccessful) {
+                    memberList = response.body()?.members ?: emptyList()
+                    Log.d("API", "Pobrano członków: ${memberList.size}")
+                }
+            } catch (e: Exception) {
+                Log.e("API", "Błąd sieci przy członkach: ${e.message}")
+            }
+        }
+    }
 }
 @Composable
-fun TaskBox(boardName: String, token: String, boardId: Int, tasks: List<Tasks>, onRefresh: () -> Unit) {
+fun TaskBox(
+    boardName: String,
+    token: String, boardId: Int,
+    tasks: List<Tasks>, onRefresh: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var taskName by remember { mutableStateOf("") }
     var taskDescription by remember { mutableStateOf("") }
@@ -120,9 +158,8 @@ fun TaskBox(boardName: String, token: String, boardId: Int, tasks: List<Tasks>, 
     var editTaskDescription by remember { mutableStateOf("") }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.5f)
             .background(
                 color = Color(0xFF404041),
                 shape = RoundedCornerShape(25.dp)
@@ -388,5 +425,141 @@ fun getIconForStatus(status: String): Int {
         "w_trakcie" -> R.drawable.taskinprogress
         "zrobione"  -> R.drawable.taskdone
         else -> R.drawable.tasknotdone
+    }
+}
+
+@Composable
+fun MembersBox(
+    members: List<Member>,
+    boardId: Int,
+    token: String,
+    onMemberAdded: () -> Unit
+) {
+    var showAddMemberDialog by remember { mutableStateOf(false) }
+    var newMemberName by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.8f)
+            .background(
+                color = Color(0xFF282828),
+                shape = RoundedCornerShape(25.dp)
+            )
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Board Members",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(bottom = 40.dp)
+            ) {
+                if (members.isEmpty()) {
+                    item {
+                        Text("No members found", color = Color.Gray, fontSize = 14.sp)
+                    }
+                } else {
+                    items(members) { member ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .background(Color(0xFF404041), shape = RoundedCornerShape(10.dp))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(15.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = member.login.take(1).uppercase(),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Text(
+                                text = member.login,
+                                color = Color.White,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Text(
+            text = "+ Add member",
+            color = Color.White,
+            fontSize = 16.sp,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(20.dp)
+                .clickable {
+                    newMemberName = ""
+                    showAddMemberDialog = true
+                }
+        )
+    }
+
+    if (showAddMemberDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddMemberDialog = false },
+            title = { Text("Add member to board", color = Color.White) },
+            text = {
+                TextField(
+                    value = newMemberName,
+                    onValueChange = { newMemberName = it },
+                    placeholder = { Text("Enter username", color = Color.Gray) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1E1E1E),
+                        unfocusedContainerColor = Color(0xFF1E1E1E),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            containerColor = Color(0xFF282828),
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newMemberName.isNotBlank()) {
+                            showAddMemberDialog = false
+                            coroutineScope.launch {
+                                try {
+                                    val request = AddMemberRequest(token, newMemberName)
+                                    val response = api.addMember(boardId, request)
+                                    if (response.isSuccessful) {
+                                        onMemberAdded()
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("API", "Błąd dodawania: ${e.message}")
+                                }
+                            }
+                        }
+                    }
+                ) { Text("Add", color = Color.White) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddMemberDialog = false }) { Text("Cancel", color = Color.Gray) }
+            }
+        )
     }
 }

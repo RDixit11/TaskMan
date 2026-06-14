@@ -81,7 +81,11 @@ class AppAddPage : ComponentActivity() {
 
                             lifecycleScope.launch {
                                 try {
-                                    val response = api.createBoard(boardInfo)
+                                    val response = if (vis == true) {
+                                        api.createBoard(boardInfo)
+                                    } else {
+                                        api.createSharedBoard(boardInfo)
+                                    }
                                     if (response.isSuccessful) {
                                         finish()
                                     }
@@ -166,7 +170,7 @@ fun CreateButton(boardName: String,
                  vis: Boolean?,
                  onCreateClick: () -> Unit) {
     Button(onClick = {
-        if (boardName.isNotBlank() && vis == true) {
+        if (boardName.isNotBlank() && vis != null) {
             onCreateClick()
     } else {
         println("Błąd: Wpisz nazwę i wybierz widoczność!")

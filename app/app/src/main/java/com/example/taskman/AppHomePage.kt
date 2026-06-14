@@ -1,434 +1,491 @@
-package com.example.taskman
+    package com.example.taskman
 
-import android.content.Intent
-import android.os.Bundle
-import android.util.Log
-import android.widget.Space
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.forEach
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.DpOffset
-import androidx.lifecycle.lifecycleScope
-import com.example.taskman.RetrofitInstance.api
-import kotlinx.coroutines.launch
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.CoroutineScope
-class AppHomePage : ComponentActivity() {
-    private var token = ""
+    import android.content.Intent
+    import android.os.Bundle
+    import android.util.Log
+    import android.widget.Space
+    import androidx.activity.ComponentActivity
+    import androidx.activity.compose.setContent
+    import androidx.compose.foundation.Image
+    import androidx.compose.foundation.background
+    import androidx.compose.foundation.clickable
+    import androidx.compose.foundation.gestures.forEach
+    import androidx.compose.foundation.layout.Box
+    import androidx.compose.foundation.layout.Column
+    import androidx.compose.foundation.layout.Row
+    import androidx.compose.foundation.layout.Spacer
+    import androidx.compose.foundation.layout.fillMaxHeight
+    import androidx.compose.foundation.layout.fillMaxSize
+    import androidx.compose.foundation.layout.fillMaxWidth
+    import androidx.compose.foundation.layout.height
+    import androidx.compose.foundation.layout.offset
+    import androidx.compose.foundation.layout.padding
+    import androidx.compose.foundation.layout.size
+    import androidx.compose.foundation.lazy.LazyColumn
+    import androidx.compose.foundation.lazy.items
+    import androidx.compose.foundation.rememberScrollState
+    import androidx.compose.foundation.shape.RoundedCornerShape
+    import androidx.compose.foundation.verticalScroll
+    import androidx.compose.material3.AlertDialog
+    import androidx.compose.material3.DropdownMenu
+    import androidx.compose.material3.DropdownMenuItem
+    import androidx.compose.material3.Text
+    import androidx.compose.material3.TextButton
+    import androidx.compose.material3.TextField
+    import androidx.compose.material3.TextFieldDefaults
+    import androidx.compose.runtime.Composable
+    import androidx.compose.runtime.LaunchedEffect
+    import androidx.compose.runtime.remember
+    import androidx.compose.ui.Alignment
+    import androidx.compose.ui.Modifier
+    import androidx.compose.ui.graphics.Color
+    import androidx.compose.ui.res.painterResource
+    import androidx.compose.ui.unit.dp
+    import androidx.compose.ui.unit.sp
+    import androidx.compose.runtime.mutableStateOf
+    import androidx.compose.runtime.getValue
+    import androidx.compose.runtime.saveable.rememberSaveable
+    import androidx.compose.runtime.setValue
+    import androidx.compose.ui.platform.LocalContext
+    import androidx.compose.ui.text.TextStyle
+    import androidx.compose.ui.unit.DpOffset
+    import androidx.lifecycle.lifecycleScope
+    import com.example.taskman.RetrofitInstance.api
+    import kotlinx.coroutines.launch
+    import androidx.lifecycle.Lifecycle
+    import androidx.lifecycle.compose.LifecycleEventEffect
+    import androidx.compose.runtime.rememberCoroutineScope
+    import kotlinx.coroutines.CoroutineScope
+    class AppHomePage : ComponentActivity() {
+        private var token = ""
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        token = intent.getStringExtra("TOKEN_CSRF") ?: ""
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            token = intent.getStringExtra("TOKEN_CSRF") ?: ""
 
-        setContent {
-            var searchQuery by remember { mutableStateOf("") }
-            var privateBoards by remember { mutableStateOf<List<Board>>(emptyList()) }
+            setContent {
+                var searchQuery by remember { mutableStateOf("") }
+                var privateBoards by remember { mutableStateOf<List<RenderableBoard>>(emptyList()) }
+                var sharedBoards by remember { mutableStateOf<List<RenderableBoard>>(emptyList()) }
 
-            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-                if (token.isNotBlank()) {
-                    lifecycleScope.launch {
-                        try {
-                            val response = api.getBoards(token)
-                            if (response.isSuccessful) {
-                                val wrapper = response.body()
-                                if (wrapper != null) {
-                                    privateBoards = wrapper.listy
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e("API", "Błąd pobierania danych w ON_RESUME: ${e.message}")
-                        }
-                    }
-                }
-            }
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF1E1E1E))
-                    .offset(y = 10.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Spacer(modifier = Modifier.height(30.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Welcome Back!",
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 30.sp,
-                        modifier = Modifier
-                            .offset(x = 20.dp)
-                            .weight(1f)
-                    )
-
-                    ClickableAddIcon(token)
-                }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    SearchBar(
-                        labText = "Search",
-                        value = searchQuery,
-                        icon = R.drawable.search,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(0.9f)
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-                    val filteredBoards = privateBoards.filter { board ->
-                        board.name.contains(searchQuery, ignoreCase = true)
-                    }
-
-                    BoardList(
-                        textval = "Your Boards",
-                        boards = filteredBoards,
-                        token = token,
-                        onRefresh = {
-                            lifecycleScope.launch {
-                                try {
-                                    val response = api.getBoards(token)
-                                    if (response.isSuccessful) {
-                                        val wrapper = response.body()
-                                        if (wrapper != null) {
-                                            privateBoards = wrapper.listy
-                                        }
+                val fetchAllBoards = {
+                    if (token.isNotBlank()) {
+                        lifecycleScope.launch {
+                            try {
+                                val response = api.getBoards(token)
+                                if (response.isSuccessful) {
+                                    val wrapper = response.body()
+                                    if (wrapper != null) {
+                                        privateBoards = wrapper.listy ?: emptyList()
                                     }
-                                } catch (e: Exception) {
-                                    Log.e("API", "Błąd podczas odświeżania listy: ${e.message}")
                                 }
+                                val sharedResponse = api.getSharedBoard(token)
+                                if (sharedResponse.isSuccessful) {
+                                    Log.d("API_DEBUG", "Surowy JSON z serwera: ${sharedResponse.body()}")
+                                    val sharedWrapper = sharedResponse.body()
+                                    if (sharedWrapper != null) {
+                                        Log.d("API_DEBUG", "Zawartość multiListy po sparowaniu: ${sharedWrapper.listy}")
+                                        sharedBoards = sharedWrapper.listy ?: emptyList()
+                                    }
+                                }
+
+                            } catch (e: Exception) {
+                                Log.e("API", "Błąd pobierania danych: ${e.message}")
                             }
                         }
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    //BoardList("Shared Boards")
+                    }
                 }
-            }
-        }
-    }
-}
 
-@Composable
-fun SearchBar(
-    labText: String,
-    value: String,
-    icon: Int? = null,
-    modifier: Modifier = Modifier,
-    onValueChange: (String) -> Unit
-) {
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(labText) },
-        modifier = modifier,
-        shape = RoundedCornerShape(15.dp),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color(0xFF404041),
-            unfocusedContainerColor = Color(0xFF404041),
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            focusedLabelColor = Color(0xFF828282),
-            unfocusedLabelColor = Color(0xFF828282)
-        ),
-        textStyle = TextStyle(fontSize = 14.sp),
-        singleLine = true,
-        leadingIcon = icon?.let {
-            {
-                Image(
-                    painter = painterResource(id = it),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-    )
-}
-
-@Composable
-fun ClickableAddIcon(token: String) {
-    val context = LocalContext.current
-
-    Image(
-        painter = painterResource(id = R.drawable.add),
-        contentDescription = "Dodaj nową tablicę",
-        modifier = Modifier
-            .size(120.dp)
-            .clickable {
-                val intent = Intent(context, AppAddPage::class.java).apply {
-                    putExtra("TOKEN_CSRF", token)
+                LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                    fetchAllBoards()
                 }
-                context.startActivity(intent)
-            }
-    )
-}
 
-@Composable
-fun BoardList(textval: String, boards: List<Board>, token: String, onRefresh: () -> Unit) {
-    val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1E1E1E))
-            .padding(vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            textval,
-            color = Color.White,
-            fontSize = 25.sp)
-        Spacer(modifier = Modifier.height(10.dp))
-        Box(modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .height(200.dp)
-            .background(
-                color = Color(0xFF282828),
-                shape = RoundedCornerShape(35.dp)
-            )
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-            ) {
-                if (boards.isEmpty()) {
-                    item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF1E1E1E))
+                        .offset(y = 10.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "No boards found",
-                            color = Color.Gray,
-                            fontSize = 16.sp
+                            text = "Welcome Back!",
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 30.sp,
+                            modifier = Modifier
+                                .offset(x = 20.dp)
+                                .weight(1f)
+                        )
+
+                        ClickableAddIcon(token)
+                    }
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        SearchBar(
+                            labText = "Search",
+                            value = searchQuery,
+                            icon = R.drawable.search,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth(0.9f)
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+                        val filteredPrivateBoards = privateBoards.filter { board ->
+                            board.name.contains(searchQuery, ignoreCase = true)
+                        }
+                        val filteredSharedBoards = sharedBoards.filter { board ->
+                            board.name.contains(searchQuery, ignoreCase = true)
+                        }
+
+                        BoardList(
+                            textval = "Your Boards",
+                            boards = filteredPrivateBoards,
+                            token = token,
+                            onRefresh = { fetchAllBoards() }
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        BoardList(
+                            textval = "Shared Boards",
+                            boards = filteredSharedBoards,
+                            token = token,
+                            onRefresh = { fetchAllBoards() }
                         )
                     }
-                } else {
-                    items(boards) { board ->
-                        var isMenuExpanded by rememberSaveable { mutableStateOf(false) }
-                        var showRenameDialog by remember { mutableStateOf(false) }
-                        var newBoardName by remember { mutableStateOf(board.name) }
-                        var showDeleteDialog by remember { mutableStateOf(false) }
+                }
+            }
+        }
+    }
 
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                                    .background(
-                                        color = Color(0xFF404041),
-                                        shape = RoundedCornerShape(15.dp)
-                                    )
-                                    .offset(x=10.dp)
-                                    .clickable {
-                                        val intent =
-                                            Intent(context, AppTaskPage::class.java).apply {
-                                                putExtra("TOKEN_CSRF", token)
-                                                putExtra("BOARD_ID", board.id)
-                                                putExtra("BOARD_NAME", board.name)
-                                            }
-                                        context.startActivity(intent)
-                                    }
-                            ) {
-                                Row(
+    @Composable
+    fun SearchBar(
+        labText: String,
+        value: String,
+        icon: Int? = null,
+        modifier: Modifier = Modifier,
+        onValueChange: (String) -> Unit
+    ) {
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(labText) },
+            modifier = modifier,
+            shape = RoundedCornerShape(15.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFF404041),
+                unfocusedContainerColor = Color(0xFF404041),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                focusedLabelColor = Color(0xFF828282),
+                unfocusedLabelColor = Color(0xFF828282),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+            ),
+            textStyle = TextStyle(fontSize = 14.sp),
+            singleLine = true,
+            leadingIcon = icon?.let {
+                {
+                    Image(
+                        painter = painterResource(id = it),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        )
+    }
+
+    @Composable
+    fun ClickableAddIcon(token: String) {
+        val context = LocalContext.current
+
+        Image(
+            painter = painterResource(id = R.drawable.add),
+            contentDescription = "Dodaj nową tablicę",
+            modifier = Modifier
+                .size(120.dp)
+                .clickable {
+                    val intent = Intent(context, AppAddPage::class.java).apply {
+                        putExtra("TOKEN_CSRF", token)
+                    }
+                    context.startActivity(intent)
+                }
+        )
+    }
+
+    @Composable
+    fun BoardList(textval: String, boards: List<RenderableBoard>, token: String, onRefresh: () -> Unit) {
+        val coroutineScope = rememberCoroutineScope()
+        val context = LocalContext.current
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1E1E1E))
+                .padding(vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                textval,
+                color = Color.White,
+                fontSize = 25.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .height(200.dp)
+                .background(
+                    color = Color(0xFF282828),
+                    shape = RoundedCornerShape(35.dp)
+                )
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    if (boards.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No boards found",
+                                color = Color.Gray,
+                                fontSize = 16.sp
+                            )
+                        }
+                    } else {
+                        items(boards) { board ->
+                            var isMenuExpanded by rememberSaveable { mutableStateOf(false) }
+                            var showRenameDialog by remember { mutableStateOf(false) }
+                            var newBoardName by remember { mutableStateOf(board.name) }
+                            var showDeleteDialog by remember { mutableStateOf(false) }
+                            var showAddMemberDialog by remember { mutableStateOf(false) }
+
+                                Box(
                                     modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = board.name,
-                                        color = Color.White,
-                                        fontSize = 18.sp,
-                                        modifier = Modifier.padding(vertical = 2.dp).weight(1f)
-
-                                    )
-
-                                    Box {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.more),
-                                            contentDescription = "Menu",
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .offset(x = -20.dp)
-                                                .clickable {
-                                                    isMenuExpanded = true
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
+                                        .background(
+                                            color = Color(0xFF404041),
+                                            shape = RoundedCornerShape(15.dp)
+                                        )
+                                        .offset(x=10.dp)
+                                        .clickable {
+                                            val intent =
+                                                Intent(context, AppTaskPage::class.java).apply {
+                                                    putExtra("TOKEN_CSRF", token)
+                                                    putExtra("BOARD_ID", board.id)
+                                                    putExtra("BOARD_NAME", board.name)
+                                                    putExtra("IS_SHARED", textval == "Shared Boards")
                                                 }
+                                            context.startActivity(intent)
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = board.name,
+                                            color = Color.White,
+                                            fontSize = 18.sp,
+                                            modifier = Modifier.padding(vertical = 2.dp).weight(1f)
+
                                         )
 
-                                        DropdownMenu(
-                                            expanded = isMenuExpanded,
-                                            onDismissRequest = { isMenuExpanded = false },
-                                            offset = DpOffset(x = (-20).dp, y=0.dp),
-                                            modifier = Modifier.background(Color(0xFF282828))
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = { Text("Change name", color = Color.White) },
-                                                onClick = {
-                                                    isMenuExpanded = false
-                                                    newBoardName = board.name
-                                                    showRenameDialog = true
-                                                }
-                                            )
-
-                                            DropdownMenuItem(
-                                                text = { Text("Delete board", color = Color.Red) },
-                                                onClick = {
-                                                    isMenuExpanded = false
-                                                    showDeleteDialog = true
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        if (showRenameDialog) {
-                            EditDetailsDialog(
-                                title = "Change board name",
-                                initialName = board.name,
-                                initialDescription = "",
-                                hasDescription = false,
-                                onDismiss = { showRenameDialog = false },
-                                onConfirm = { updatedName, _ ->
-                                    showRenameDialog = false
-                                    coroutineScope.launch {
-                                        try {
-                                            val boardInfo = CreateBoardRequest(token, updatedName)
-                                            val response = api.renameBoard(boardInfo, board.id)
-                                            if (response.isSuccessful) {
-                                                Log.d("API", "Nazwa tablicy zmieniona!")
-                                                onRefresh()
-                                            }
-                                        } catch (e: Exception) {
-                                            Log.e("API", "Błąd zmiany nazwy: ${e.message}")
-                                        }
-                                    }
-                                }
-                            )
-                        }
-
-                        if (showDeleteDialog) {
-                            AlertDialog(
-                                onDismissRequest = { showDeleteDialog = false },
-                                title = { Text(text = "Delete board", color = Color.White) },
-                                text = {
-                                    Text("Are you sure you want to delete board \"${board.name}\"? This action cannot be undone.", color = Color.LightGray)
-                                },
-                                containerColor = Color(0xFF282828),
-                                confirmButton = {
-                                    TextButton(
-                                        onClick = {
-                                            showDeleteDialog = false
-                                            coroutineScope.launch {
-                                                try {
-                                                    val response = api.deleteBoard(token, board.id)
-                                                    if (response.isSuccessful) {
-                                                        Log.d("API", "Usunięto tablicę!")
-                                                        onRefresh()
+                                        Box {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.more),
+                                                contentDescription = "Menu",
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .offset(x = -20.dp)
+                                                    .clickable {
+                                                        isMenuExpanded = true
                                                     }
-                                                } catch (e: Exception) {
-                                                    Log.e("API", "Błąd usuwania: ${e.message}")
+                                            )
+
+                                            DropdownMenu(
+                                                expanded = isMenuExpanded,
+                                                onDismissRequest = { isMenuExpanded = false },
+                                                offset = DpOffset(x = (-20).dp, y=0.dp),
+                                                modifier = Modifier.background(Color(0xFF282828))
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Change name", color = Color.White) },
+                                                    onClick = {
+                                                        isMenuExpanded = false
+                                                        newBoardName = board.name
+                                                        showRenameDialog = true
+                                                    }
+                                                )
+
+                                                if (textval == "Shared Boards") {
+                                                    DropdownMenuItem(
+                                                        text = { Text("Members", color = Color.White) },
+                                                        onClick = {
+                                                            isMenuExpanded = false
+                                                            showAddMemberDialog = true
+                                                        }
+                                                    )
                                                 }
+
+                                                DropdownMenuItem(
+                                                    text = { Text("Delete board", color = Color.Red) },
+                                                    onClick = {
+                                                        isMenuExpanded = false
+                                                        showDeleteDialog = true
+                                                    }
+                                                )
                                             }
                                         }
-                                    ) {
-                                        Text("Delete", color = Color.Red)
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showDeleteDialog = false }) {
-                                        Text("Cancel", color = Color.Gray)
                                     }
                                 }
-                            )
-                        }
 
+                            if (showAddMemberDialog) {
+                                val currentMembers = (board as? SharedBoard)?.let {
+                                    emptyList<String>()
+                                } ?: emptyList()
+
+                                AddMemberDialog(
+                                    boardName = board.name,
+                                    existingMembers = currentMembers,
+                                    onDismiss = { showAddMemberDialog = false },
+                                    onConfirm = { username ->
+                                        showAddMemberDialog = false
+                                        coroutineScope.launch {
+                                            try {
+                                                val request = AddMemberRequest(token, username)
+                                                val response = api.addMember(board.id, request)
+                                                if (response.isSuccessful) {
+                                                    Log.d("API", "Dodano nowego członka: $username")
+                                                    onRefresh() // Odświeżamy ekrany
+                                                } else {
+                                                    Log.e("API", "Błąd dodawania członka: ${response.code()}")
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("API", "Wyjątek API: ${e.message}")
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+
+
+                            if (showRenameDialog) {
+                                EditDetailsDialog(
+                                    title = "Change board name",
+                                    initialName = board.name,
+                                    initialDescription = "",
+                                    hasDescription = false,
+                                    onDismiss = { showRenameDialog = false },
+                                    onConfirm = { updatedName, _ ->
+                                        showRenameDialog = false
+                                        coroutineScope.launch {
+                                            try {
+                                                val boardInfo = CreateBoardRequest(token, updatedName)
+                                                val response = api.renameBoard(boardInfo, board.id)
+                                                if (response.isSuccessful) {
+                                                    Log.d("API", "Nazwa tablicy zmieniona!")
+                                                    onRefresh()
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("API", "Błąd zmiany nazwy: ${e.message}")
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+
+                            if (showDeleteDialog) {
+                                AlertDialog(
+                                    onDismissRequest = { showDeleteDialog = false },
+                                    title = { Text(text = "Delete board", color = Color.White) },
+                                    text = {
+                                        Text("Are you sure you want to delete board \"${board.name}\"? This action cannot be undone.", color = Color.LightGray)
+                                    },
+                                    containerColor = Color(0xFF282828),
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                showDeleteDialog = false
+                                                coroutineScope.launch {
+                                                    try {
+                                                        val response = api.deleteBoard(token, board.id)
+                                                        if (response.isSuccessful) {
+                                                            Log.d("API", "Usunięto tablicę!")
+                                                            onRefresh()
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        Log.e("API", "Błąd usuwania: ${e.message}")
+                                                    }
+                                                }
+                                            }
+                                        ) {
+                                            Text("Delete", color = Color.Red)
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showDeleteDialog = false }) {
+                                            Text("Cancel", color = Color.Gray)
+                                        }
+                                    }
+                                )
+                            }
+
+                        }
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-fun EditDetailsDialog(
-    title: String,
-    initialName: String,
-    initialDescription: String,
-    hasDescription: Boolean = true, // Flaga: czy pokazać drugie pole tekstowe
-    onDismiss: () -> Unit,
-    onConfirm: (newName: String, newDescription: String) -> Unit
-) {
-    var name by remember { mutableStateOf(initialName) }
-    var description by remember { mutableStateOf(initialDescription) }
+    @Composable
+    fun AddMemberDialog(
+        boardName: String,
+        existingMembers: List<String>,
+        onDismiss: () -> Unit,
+        onConfirm: (username: String) -> Unit
+    ) {
+        var memberName by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = title, color = Color.White) },
-        text = {
-            Column {
-                Text("Name:", color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp))
-                TextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1E1E1E),
-                        unfocusedContainerColor = Color(0xFF1E1E1E),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(text = "Members of \"$boardName\"", color = Color.White, fontSize = 20.sp) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (existingMembers.isNotEmpty()) {
+                        Text("Current members:", color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(8.dp))
+                                .padding(8.dp)
+                        ) {
+                            LazyColumn {
+                                items(existingMembers) { member ->
+                                    Text(text = "• $member", color = Color.LightGray, fontSize = 14.sp)
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
-                if (hasDescription) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Description:", color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp))
+                    Text("Add new member:", color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp))
                     TextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        maxLines = 4,
+                        value = memberName,
+                        onValueChange = { memberName = it },
+                        placeholder = { Text("Enter username or email", color = Color.Gray) },
+                        singleLine = true,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFF1E1E1E),
                             unfocusedContainerColor = Color(0xFF1E1E1E),
@@ -438,21 +495,86 @@ fun EditDetailsDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+            },
+            containerColor = Color(0xFF282828),
+            confirmButton = {
+                TextButton(
+                    onClick = { if (memberName.isNotBlank()) onConfirm(memberName) },
+                    enabled = memberName.isNotBlank()
+                ) {
+                    Text("Add", color = if (memberName.isNotBlank()) Color.White else Color.Gray)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Close", color = Color.Gray)
+                }
             }
-        },
-        containerColor = Color(0xFF282828),
-        confirmButton = {
-            TextButton(
-                onClick = { if (name.isNotBlank()) onConfirm(name, description) },
-                enabled = name.isNotBlank()
-            ) {
-                Text("Save", color = if (name.isNotBlank()) Color.White else Color.Gray)
+        )
+    }
+
+    @Composable
+    fun EditDetailsDialog(
+        title: String,
+        initialName: String,
+        initialDescription: String,
+        hasDescription: Boolean = true,
+        onDismiss: () -> Unit,
+        onConfirm: (newName: String, newDescription: String) -> Unit
+    ) {
+        var name by remember { mutableStateOf(initialName) }
+        var description by remember { mutableStateOf(initialDescription) }
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(text = title, color = Color.White) },
+            text = {
+                Column {
+                    Text("Name:", color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp))
+                    TextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF1E1E1E),
+                            unfocusedContainerColor = Color(0xFF1E1E1E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (hasDescription) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Description:", color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp))
+                        TextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            maxLines = 4,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color(0xFF1E1E1E),
+                                unfocusedContainerColor = Color(0xFF1E1E1E),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
+            containerColor = Color(0xFF282828),
+            confirmButton = {
+                TextButton(
+                    onClick = { if (name.isNotBlank()) onConfirm(name, description) },
+                    enabled = name.isNotBlank()
+                ) {
+                    Text("Save", color = if (name.isNotBlank()) Color.White else Color.Gray)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel", color = Color.Gray)
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.Gray)
-            }
-        }
-    )
-}
+        )
+    }

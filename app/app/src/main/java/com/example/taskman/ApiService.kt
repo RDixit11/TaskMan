@@ -45,4 +45,19 @@ interface ApiService {
 
     @PUT("/api/zadania/{id_zadania}") // Funkcja do zmiany nazwy i opisu zadania
     suspend fun updateTask(@Body AddTaskRequest: AddTaskRequest, @Path("id_zadania") taskId: Int): Response<Unit>
+
+// LISTY WSPÓŁZDIELONE
+
+    @GET("/api/multi-listy") // Funkcja do pobierania tablic współdzielonych
+    suspend fun getSharedBoard(@Header("X-CSRF-Token") token: String): Response<SharedBoardResponse>
+
+    @POST("/api/multi-listy") // Funkcja do tworzenia nowej tablicy współdzielonej
+    suspend fun createSharedBoard(@Body createBoardRequest: CreateBoardRequest): Response<Unit>
+
+    @GET("/api/multi-listy/{lista_id}/members") // Funkcja do pobierania członków tablicy współdzielonej
+    suspend fun getMembers(@Header("X-CSRF-Token") token: String,@Path("lista_id") boardId: Int): Response<MembersResponse>
+
+    @POST("/api/multi-listy/{lista_id}/members")
+    suspend fun addMember(@Path("lista_id") boardId: Int, @Body addMemberRequest: AddMemberRequest): Response<Unit>
+
 }
