@@ -115,6 +115,10 @@ fun TaskBox(boardName: String, token: String, boardId: Int, tasks: List<Tasks>, 
     var taskDescription by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
 
+    var editingTask by remember { mutableStateOf<Tasks?>(null) }
+    var editTaskName by remember { mutableStateOf("") }
+    var editTaskDescription by remember { mutableStateOf("") }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -130,6 +134,31 @@ fun TaskBox(boardName: String, token: String, boardId: Int, tasks: List<Tasks>, 
             modifier = Modifier.padding(20.dp),
             fontSize = 18.sp
         )
+
+        editingTask?.let { task ->
+            EditDetailsDialog(
+                title = "Edit Task",
+                initialName = editTaskName,
+                initialDescription = editTaskDescription,
+                hasDescription = true,
+                onDismiss = { editingTask = null },
+                onConfirm = { updatedName, updatedDescription ->
+                    editingTask = null
+                    coroutineScope.launch {
+                        try {
+                            val request = AddTaskRequest(token, updatedName, updatedDescription)
+                            val response = api.updateTask(request, task.id)
+                            if (response.isSuccessful) {
+                                Log.d("API", "Zadanie zaktualizowane!")
+                                onRefresh()
+                            }
+                        } catch (e: Exception) {
+                            Log.e("API", "Błąd edycji zadania: ${e.message}")
+                        }
+                    }
+                }
+            )
+        }
 
         LazyColumn(
             modifier = Modifier
@@ -211,7 +240,12 @@ fun TaskBox(boardName: String, token: String, boardId: Int, tasks: List<Tasks>, 
                                         Log.e("API", "Błąd zmiany statusu: ${e.message}")
                                     }
                                 }
-                            }
+                            },
+                                onTaskClick = {
+                                    editTaskName = task.tytul
+                                    editTaskDescription = task.opis ?: ""
+                                    editingTask = task
+                                }
                             )
                         })
                 }
@@ -305,7 +339,7 @@ fun TaskBox(boardName: String, token: String, boardId: Int, tasks: List<Tasks>, 
 }
 
 @Composable
-fun TaskItem(task: Tasks,onStatusClick: () -> Unit) {
+fun TaskItem(task: Tasks,onStatusClick: () -> Unit, onTaskClick: () -> Unit) {
     val isDone = task.stan == "zrobione"
 
     Row(
@@ -313,7 +347,8 @@ fun TaskItem(task: Tasks,onStatusClick: () -> Unit) {
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .background(Color(0xFF282828), shape = RoundedCornerShape(10.dp))
-            .padding(12.dp),
+            .padding(12.dp)
+            .clickable { onTaskClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(

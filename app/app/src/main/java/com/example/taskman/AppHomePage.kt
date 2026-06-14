@@ -324,53 +324,25 @@ fun BoardList(textval: String, boards: List<Board>, token: String, onRefresh: ()
                                 }
                             }
                         if (showRenameDialog) {
-                            AlertDialog(
-                                onDismissRequest = { showRenameDialog = false },
-                                title = { Text(text = "Change board name", color = Color.White) },
-                                text = {
-                                    Column {
-                                        Text("Enter new name for the board:", color = Color.Gray, modifier = Modifier.padding(bottom = 8.dp))
-                                        TextField(
-                                            value = newBoardName,
-                                            onValueChange = { newBoardName = it },
-                                            singleLine = true,
-                                            colors = TextFieldDefaults.colors(
-                                                focusedContainerColor = Color(0xFF404041),
-                                                unfocusedContainerColor = Color(0xFF404041),
-                                                focusedTextColor = Color.White,
-                                                unfocusedTextColor = Color.White
-                                            )
-                                        )
-                                    }
-                                },
-                                containerColor = Color(0xFF282828),
-                                confirmButton = {
-                                    TextButton(
-                                        onClick = {
-                                            showRenameDialog = false
-                                            if (newBoardName.isNotBlank()) {
-                                                Log.d("API", "Zmieniam nazwę tablicy ${board.id} na: $newBoardName")
-                                                coroutineScope.launch {
-                                                    val boardInfo = CreateBoardRequest(token, newBoardName)
-                                                    try {
-                                                        val response = api.renameBoard(boardInfo, board.id)
-                                                        if (response.isSuccessful) {
-                                                            Log.d("API", "Nazwa zmieniona pomyślnie!")
-                                                            onRefresh()
-                                                        }
-                                                    } catch (e: Exception) {
-                                                        Log.e("API", "Błąd zmiany nazwy: ${e.message}")
-                                                    }
-                                                }
+                            EditDetailsDialog(
+                                title = "Change board name",
+                                initialName = board.name,
+                                initialDescription = "",
+                                hasDescription = false,
+                                onDismiss = { showRenameDialog = false },
+                                onConfirm = { updatedName, _ ->
+                                    showRenameDialog = false
+                                    coroutineScope.launch {
+                                        try {
+                                            val boardInfo = CreateBoardRequest(token, updatedName)
+                                            val response = api.renameBoard(boardInfo, board.id)
+                                            if (response.isSuccessful) {
+                                                Log.d("API", "Nazwa tablicy zmieniona!")
+                                                onRefresh()
                                             }
+                                        } catch (e: Exception) {
+                                            Log.e("API", "Błąd zmiany nazwy: ${e.message}")
                                         }
-                                    ) {
-                                        Text("Save", color = Color.White)
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showRenameDialog = false }) {
-                                        Text("Cancel", color = Color.Gray)
                                     }
                                 }
                             )
@@ -417,4 +389,70 @@ fun BoardList(textval: String, boards: List<Board>, token: String, onRefresh: ()
             }
         }
     }
+}
+
+@Composable
+fun EditDetailsDialog(
+    title: String,
+    initialName: String,
+    initialDescription: String,
+    hasDescription: Boolean = true, // Flaga: czy pokazać drugie pole tekstowe
+    onDismiss: () -> Unit,
+    onConfirm: (newName: String, newDescription: String) -> Unit
+) {
+    var name by remember { mutableStateOf(initialName) }
+    var description by remember { mutableStateOf(initialDescription) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title, color = Color.White) },
+        text = {
+            Column {
+                Text("Name:", color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp))
+                TextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1E1E1E),
+                        unfocusedContainerColor = Color(0xFF1E1E1E),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (hasDescription) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Description:", color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp))
+                    TextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        maxLines = 4,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF1E1E1E),
+                            unfocusedContainerColor = Color(0xFF1E1E1E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        containerColor = Color(0xFF282828),
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onConfirm(name, description) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Save", color = if (name.isNotBlank()) Color.White else Color.Gray)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        }
+    )
 }
