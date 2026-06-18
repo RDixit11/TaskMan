@@ -57,7 +57,24 @@ interface ApiService {
     @GET("/api/multi-listy/{lista_id}/members") // Funkcja do pobierania członków tablicy współdzielonej
     suspend fun getMembers(@Header("X-CSRF-Token") token: String,@Path("lista_id") boardId: Int): Response<MembersResponse>
 
-    @POST("/api/multi-listy/{lista_id}/members")
+    @POST("/api/multi-listy/{lista_id}/members") // Funkcja do dodawania członka do tablicy współdzielonej
     suspend fun addMember(@Path("lista_id") boardId: Int, @Body addMemberRequest: AddMemberRequest): Response<Unit>
 
+    @DELETE("/api/multi-listy/{lista_id}/members/{member_user_id}")
+    suspend fun deleteMember(@Header("X-CSRF-Token") token: String,@Path("lista_id") boardId: Int, @Path("member_user_id") memberId: Int): Response<Unit>
+
+    @POST("/api/multi-listy/{lista_id}/zadania") // Funkcja do tworzenia nowego zadania w tablicy współdzielonej
+    suspend fun addSharedTask(@Body addTaskRequest: AddTaskRequest, @Path("lista_id") boardId: Int): Response<Unit>
+
+    @GET("/api/multi-listy/{lista_id}/zadania") // Funkcja do pobierania zadań z tablicy współdzielonej
+    suspend fun getSharedTasks(@Header("X-CSRF-Token") token: String, @Path("lista_id") boardId: Int): Response<TasksResponse>
+
+    @PUT("/api/multi-zadania/{zadanie_id}") // Funkcja do zmiany nazwy i opisu zadania w tablicy współdzielonej
+    suspend fun  updateSharedTask(@Body AddTaskRequest: AddTaskRequest, @Path("zadanie_id") taskId: Int): Response<Unit>
+
+    @DELETE("/api/multi-zadania/{zadanie_id}") // Funkcja do usuwania zadania w tablicy współdzielonej
+    suspend fun deleteSharedTask(@Header("X-CSRF-Token") token: String, @Path("zadanie_id") taskId: Int): Response<Unit>
+
+    @PATCH("/api/multi-zadania/{zadanie_id}/stan") // Funkcja do zmiany stanu zadania w tablicy współdzielonej
+    suspend fun updateSharedTaskStatus(@Body updateTaskStatusRequest: UpdateTaskStatusRequest, @Path("zadanie_id") taskId: Int): Response<Unit>
 }

@@ -92,17 +92,24 @@ fun LoginScreen(navController: NavController) {
         MidRectLogin(navController)
     }
 }
-@Composable // Komponent ekranu rejestracji
+@Composable
 fun RegisterScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF424242)),
-        contentAlignment = Alignment.TopCenter
+            .background(Color(0xFF424242))
     ) {
         TopRect("Register")
 
-        MidRect(navController)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 200.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+
+            MidRect(navController)
+        }
     }
 }
 
@@ -147,11 +154,12 @@ fun MidRect(navController: NavController, modifier: Modifier = Modifier.offset(y
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var repeatPassword by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier
             .fillMaxWidth(0.9f)
-            .fillMaxHeight(0.60f)
+            .height(450.dp)
             .background(
                 color = Color(0xFF6a6a6a),
                 shape = RoundedCornerShape(35.dp)
@@ -187,15 +195,20 @@ fun MidRect(navController: NavController, modifier: Modifier = Modifier.offset(y
                             Log.d("API", "Sukces")
                             navController.navigate("login")
                         } else {
-                            Log.e("API", "Błąd: ${response.code()}")
-                            Log.e("API", "BODY: ${response.errorBody()?.string()}")
+                            errorMessage = "Błąd: ${response.code()}"
                         }
 
                     } catch (e: Exception) {
-                        Log.e("API", "Wyjątek: ${e.message}")
+                        errorMessage = "Wyjątek: ${e.message}"
                     }
                 }
             }
+
+                Text(
+                    text = errorMessage,
+                    color = if (errorMessage.isEmpty()) Color.Transparent else Color.Red,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -221,11 +234,12 @@ fun MidRect(navController: NavController, modifier: Modifier = Modifier.offset(y
 fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.offset(y = 230.dp)) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
 
     Box(
         modifier = modifier
             .fillMaxWidth(0.9f)
-            .fillMaxHeight(0.6f)
+            .height(450.dp)
             .background(
                 color = Color(0xFF6a6a6a),
                 shape = RoundedCornerShape(35.dp)
@@ -257,7 +271,6 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
             val context = LocalContext.current
 
             Btn("Log in"){
-                Log.d("API_DEBUG", "login=$email password=$password")
                 scope.launch {
                     try {
                         val response = api.login(
@@ -265,14 +278,11 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
                         )
 
                         if (response.isSuccessful) {
-                            Log.d("API", "")
 
                             val loginData = response.body()
                             if (loginData != null) {
                                 val userId = loginData.uzytkownikId
                                 val token = loginData.tokenCsrf
-                                Log.d("API_SUCCESS", "Zalogowano użytkownika o ID: $userId")
-                                Log.d("API_SUCCESS", "Token: $token")
 
                                 val intent = Intent(context, AppHomePage::class.java).apply{
                                     putExtra("TOKEN_CSRF", token)
@@ -280,24 +290,30 @@ fun MidRectLogin(navController: NavController, modifier: Modifier = Modifier.off
                                 context.startActivity(intent)
                             }
                         } else {
-                            Log.e("API", "Błąd: ${response.code()}")
-                            Log.e("API", "BODY: ${response.errorBody()?.string()}")
+                            errorMessage = "Błąd: ${response.code()}"
+                            errorMessage = "BODY: ${response.errorBody()?.string()}"
                             email = ""
                             password = ""
                         }
 
                     } catch (e: Exception) {
-                        Log.e("API", "Wyjątek: ${e.message}")
+                        errorMessage = "Wyjątek: ${e.message}"
                     }
                 }
             }
+
+                Text(
+                    text = errorMessage,
+                    color = Color.Red,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
 
             Text(buildAnnotatedString {
                 withStyle(SpanStyle(color = Color.White)) {
                     append("First time? ")
                 }
 
-                Spacer(modifier = Modifier.height(85.dp))
+                Spacer(modifier = Modifier.height(75.dp))
                 withStyle(SpanStyle(color = Color(0xFF3982FF))) {
                     append("Register")
                 }

@@ -9,12 +9,10 @@
     import androidx.compose.foundation.Image
     import androidx.compose.foundation.background
     import androidx.compose.foundation.clickable
-    import androidx.compose.foundation.gestures.forEach
     import androidx.compose.foundation.layout.Box
     import androidx.compose.foundation.layout.Column
     import androidx.compose.foundation.layout.Row
     import androidx.compose.foundation.layout.Spacer
-    import androidx.compose.foundation.layout.fillMaxHeight
     import androidx.compose.foundation.layout.fillMaxSize
     import androidx.compose.foundation.layout.fillMaxWidth
     import androidx.compose.foundation.layout.height
@@ -23,9 +21,7 @@
     import androidx.compose.foundation.layout.size
     import androidx.compose.foundation.lazy.LazyColumn
     import androidx.compose.foundation.lazy.items
-    import androidx.compose.foundation.rememberScrollState
     import androidx.compose.foundation.shape.RoundedCornerShape
-    import androidx.compose.foundation.verticalScroll
     import androidx.compose.material3.AlertDialog
     import androidx.compose.material3.DropdownMenu
     import androidx.compose.material3.DropdownMenuItem
@@ -34,7 +30,6 @@
     import androidx.compose.material3.TextField
     import androidx.compose.material3.TextFieldDefaults
     import androidx.compose.runtime.Composable
-    import androidx.compose.runtime.LaunchedEffect
     import androidx.compose.runtime.remember
     import androidx.compose.ui.Alignment
     import androidx.compose.ui.Modifier
@@ -55,7 +50,6 @@
     import androidx.lifecycle.Lifecycle
     import androidx.lifecycle.compose.LifecycleEventEffect
     import androidx.compose.runtime.rememberCoroutineScope
-    import kotlinx.coroutines.CoroutineScope
     class AppHomePage : ComponentActivity() {
         private var token = ""
 
@@ -67,7 +61,7 @@
                 var searchQuery by remember { mutableStateOf("") }
                 var privateBoards by remember { mutableStateOf<List<RenderableBoard>>(emptyList()) }
                 var sharedBoards by remember { mutableStateOf<List<RenderableBoard>>(emptyList()) }
-
+                var errorMessage by remember { mutableStateOf("") }
                 val fetchAllBoards = {
                     if (token.isNotBlank()) {
                         lifecycleScope.launch {
@@ -81,10 +75,8 @@
                                 }
                                 val sharedResponse = api.getSharedBoard(token)
                                 if (sharedResponse.isSuccessful) {
-                                    Log.d("API_DEBUG", "Surowy JSON z serwera: ${sharedResponse.body()}")
                                     val sharedWrapper = sharedResponse.body()
                                     if (sharedWrapper != null) {
-                                        Log.d("API_DEBUG", "Zawartość multiListy po sparowaniu: ${sharedWrapper.listy}")
                                         sharedBoards = sharedWrapper.listy ?: emptyList()
                                     }
                                 }
@@ -149,7 +141,8 @@
                             textval = "Your Boards",
                             boards = filteredPrivateBoards,
                             token = token,
-                            onRefresh = { fetchAllBoards() }
+                            onRefresh = { fetchAllBoards() },
+                            onError = { errorMessage = it }
                         )
 
                         Spacer(modifier = Modifier.height(20.dp))
@@ -158,7 +151,8 @@
                             textval = "Shared Boards",
                             boards = filteredSharedBoards,
                             token = token,
-                            onRefresh = { fetchAllBoards() }
+                            onRefresh = { fetchAllBoards() },
+                            onError = { errorMessage = it }
                         )
                     }
                 }
@@ -223,7 +217,11 @@
     }
 
     @Composable
-    fun BoardList(textval: String, boards: List<RenderableBoard>, token: String, onRefresh: () -> Unit) {
+    fun BoardList(textval: String,
+                  boards: List<RenderableBoard>,
+                  token: String,
+                  onRefresh: () -> Unit,
+                  onError: (String) -> Unit) {
         val coroutineScope = rememberCoroutineScope()
         val context = LocalContext.current
         Column(
@@ -328,16 +326,6 @@
                                                     }
                                                 )
 
-                                                if (textval == "Shared Boards") {
-                                                    DropdownMenuItem(
-                                                        text = { Text("Members", color = Color.White) },
-                                                        onClick = {
-                                                            isMenuExpanded = false
-                                                            showAddMemberDialog = true
-                                                        }
-                                                    )
-                                                }
-
                                                 DropdownMenuItem(
                                                     text = { Text("Delete board", color = Color.Red) },
                                                     onClick = {
@@ -366,13 +354,12 @@
                                                 val request = AddMemberRequest(token, username)
                                                 val response = api.addMember(board.id, request)
                                                 if (response.isSuccessful) {
-                                                    Log.d("API", "Dodano nowego członka: $username")
-                                                    onRefresh() // Odświeżamy ekrany
+                                                    onRefresh()
                                                 } else {
-                                                    Log.e("API", "Błąd dodawania członka: ${response.code()}")
+                                                    onError("Błąd dodawania członka: ${response.code()}")
                                                 }
                                             } catch (e: Exception) {
-                                                Log.e("API", "Wyjątek API: ${e.message}")
+                                                onError("Wyjątek API: ${e.message}")
                                             }
                                         }
                                     }
@@ -394,11 +381,10 @@
                                                 val boardInfo = CreateBoardRequest(token, updatedName)
                                                 val response = api.renameBoard(boardInfo, board.id)
                                                 if (response.isSuccessful) {
-                                                    Log.d("API", "Nazwa tablicy zmieniona!")
                                                     onRefresh()
                                                 }
                                             } catch (e: Exception) {
-                                                Log.e("API", "Błąd zmiany nazwy: ${e.message}")
+                                                onError("Błąd zmiany nazwy: ${e.message}")
                                             }
                                         }
                                     }
@@ -421,11 +407,10 @@
                                                     try {
                                                         val response = api.deleteBoard(token, board.id)
                                                         if (response.isSuccessful) {
-                                                            Log.d("API", "Usunięto tablicę!")
                                                             onRefresh()
                                                         }
                                                     } catch (e: Exception) {
-                                                        Log.e("API", "Błąd usuwania: ${e.message}")
+                                                        onError( "Błąd usuwania: ${e.message}")
                                                     }
                                                 }
                                             }

@@ -92,6 +92,7 @@ class AppTaskPage : ComponentActivity() {
                     boardName = boardName,
                     token = token,
                     boardId = boardId,
+                    isShared = isShared,
                     tasks = taskList,
                     onRefresh = { refreshTasks() },
                     modifier = Modifier.fillMaxHeight(if (isShared) 0.45f else 0.85f)
@@ -102,7 +103,7 @@ class AppTaskPage : ComponentActivity() {
                         members = memberList,
                         boardId = boardId,
                         token = token,
-                        onMemberAdded = { refreshMembers() }
+                        onMembersChanged = { refreshMembers() }
                     )
                 }
             }
@@ -111,7 +112,11 @@ class AppTaskPage : ComponentActivity() {
     private fun refreshTasks() {
         lifecycleScope.launch {
             try {
-                val response = api.getTasks(boardId, token)
+                val response = if (isShared) {
+                    api.getSharedTasks(token, boardId)
+                } else {
+                    api.getTasks(boardId, token)
+                }
                 if (response.isSuccessful) {
                     val tasksResponse = response.body()
                     if (tasksResponse != null) {
@@ -144,7 +149,9 @@ class AppTaskPage : ComponentActivity() {
 @Composable
 fun TaskBox(
     boardName: String,
-    token: String, boardId: Int,
+    token: String,
+    boardId: Int,
+    isShared: Boolean,
     tasks: List<Tasks>, onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -184,9 +191,12 @@ fun TaskBox(
                     coroutineScope.launch {
                         try {
                             val request = AddTaskRequest(token, updatedName, updatedDescription)
-                            val response = api.updateTask(request, task.id)
+                            val response = if (isShared) {
+                                api.updateSharedTask(request, task.id)
+                            } else {
+                                api.updateTask(request, task.id)
+                            }
                             if (response.isSuccessful) {
-                                Log.d("API", "Zadanie zaktualizowane!")
                                 onRefresh()
                             }
                         } catch (e: Exception) {
@@ -219,9 +229,12 @@ fun TaskBox(
                             if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
                                 coroutineScope.launch {
                                     try {
-                                        val response = api.deleteTask(token, task.id)
+                                        val response = if (isShared) {
+                                            api.deleteSharedTask(token, task.id)
+                                        } else {
+                                            api.deleteTask(token, task.id)
+                                        }
                                         if (response.isSuccessful) {
-                                            Log.d("API", "Zadanie usunięte!")
                                             onRefresh()
                                         }
                                     } catch (e: Exception) {
@@ -268,7 +281,11 @@ fun TaskBox(
                                 val updateTask = UpdateTaskStatusRequest(token, newState)
                                 coroutineScope.launch {
                                     try {
-                                        val response = api.updateTaskStatus(updateTask, task.id)
+                                        val response = if (isShared) {
+                                            api.updateSharedTaskStatus(updateTask, task.id)
+                                        } else {
+                                            api.updateTaskStatus(updateTask, task.id)
+                                        }
                                         if (response.isSuccessful) {
                                             Log.d("API", "Status zmieniony pomyślnie!")
                                             onRefresh()
@@ -349,7 +366,11 @@ fun TaskBox(
                                 val task = AddTaskRequest(token, taskName, taskDescription)
                                 coroutineScope.launch {
                                     try {
-                                        val response = api.addTask(task, boardId)
+                                        val response = if (isShared) {
+                                            api.addSharedTask(task, boardId)
+                                        } else {
+                                            api.addTask(task, boardId)
+                                        }
                                         if (response.isSuccessful) {
                                             Log.d("API", "Zadanie dodane!")
                                             onRefresh()
@@ -433,11 +454,12 @@ fun MembersBox(
     members: List<Member>,
     boardId: Int,
     token: String,
-    onMemberAdded: () -> Unit
+    onMembersChanged: () -> Unit
 ) {
     var showAddMemberDialog by remember { mutableStateOf(false) }
     var newMemberName by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
+    var memberToDelete by remember { mutableStateOf<Member?>(null) }
 
     Box(
         modifier = Modifier
@@ -475,7 +497,8 @@ fun MembersBox(
                                 .fillMaxWidth()
                                 .padding(vertical = 6.dp)
                                 .background(Color(0xFF404041), shape = RoundedCornerShape(10.dp))
-                                .padding(12.dp),
+                                .padding(12.dp)
+                                .clickable { memberToDelete = member },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
@@ -518,6 +541,43 @@ fun MembersBox(
         )
     }
 
+    memberToDelete?.let { member ->
+        AlertDialog(
+            onDismissRequest = { memberToDelete = null },
+            title = { Text("Remove member", color = Color.White) },
+            text = { Text("Are you sure you want to remove ${member.login} from this board?", color = Color.LightGray) },
+            containerColor = Color(0xFF282828),
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val targetMember = member
+                        memberToDelete = null
+                        coroutineScope.launch {
+                            try {
+                                val response = api.deleteMember(token, boardId, targetMember.id)
+                                if (response.isSuccessful) {
+                                    Log.d("API", "Pomyślnie usunięto członka: ${targetMember.login}")
+                                    onMembersChanged()
+                                } else {
+                                    Log.e("API", "Błąd usuwania członka: ${response.code()}")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("API", "Błąd sieci podczas usuwania członka: ${e.message}")
+                            }
+                        }
+                    }
+                ) {
+                    Text("Remove", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { memberToDelete = null }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            }
+        )
+    }
+
     if (showAddMemberDialog) {
         AlertDialog(
             onDismissRequest = { showAddMemberDialog = false },
@@ -547,7 +607,7 @@ fun MembersBox(
                                     val request = AddMemberRequest(token, newMemberName)
                                     val response = api.addMember(boardId, request)
                                     if (response.isSuccessful) {
-                                        onMemberAdded()
+                                        onMembersChanged()
                                     }
                                 } catch (e: Exception) {
                                     Log.e("API", "Błąd dodawania: ${e.message}")
